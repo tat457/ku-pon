@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>幸運のクーポンマシーン - Coupon Lucky Machine</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;900&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            background: radial-gradient(circle at center, #1a103c 0%, #0b0618 100%);
+            color: #ffffff;
+            touch-action: manipulation;
+        }
+
+        .pixel-font {
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        /* 3Dボタン・レバーのスタイリング */
+        .arcade-button {
+            transition: all 0.1s ease;
+            box-shadow: 0 10px 0 #990000, 0 15px 20px rgba(0, 0, 0, 0.6);
+        }
+        .arcade-button:active {
+            transform: translateY(6px);
+            box-shadow: 0 4px 0 #990000, 0 8px 10px rgba(0, 0, 0, 0.6);
+        }
+
+        .arcade-lever-base {
+            box-shadow: inset 0 5px 10px rgba(0,0,0,0.8), 0 5px 15px rgba(0,0,0,0.5);
+        }
+
+        .lever-stick {
+            transform-origin: bottom center;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .lever-pulled {
+            transform: rotateX(45deg) translateY(20px);
+        }
+
+        /* ネオン・グローエフェクト */
+        .neon-text-gold {
+            text-shadow: 0 0 5px #fff, 0 0 10px #ffea00, 0 0 20px #ffea00, 0 0 40px #ffaa00;
+        }
+        .neon-box-purple {
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.5), inset 0 0 15px rgba(168, 85, 247, 0.3);
+        }
+
+        /* ドラムスロットの演出 */
+        .slot-drum {
+            perspective: 1000px;
+        }
+
+        /* チケットのギザギザフチ */
+        .ticket-edge-left {
+            background-image: radial-gradient(circle at 0 50%, transparent 10px, #ffffff 11px);
+        }
+
+        /* レアリティアニメーション */
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.03); }
+        }
+        .ur-glow {
+            animation: pulse-glow 1.5s infinite ease-in-out;
+            box-shadow: 0 0 25px #ec4899, 0 0 50px #8b5cf6;
+        }
+
+        /* パーティクル用キャンバス */
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 50;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden selection:bg-pink-500 selection:text-white">
+
+    <!-- パーティクルキャンバス -->
+    <canvas id="particle-canvas"></canvas>
+
+    <!-- ヘッダーナビゲーション -->
+    <header class="w-full max-w-4xl mx-auto p-4 flex justify-between items-center z-10">
+        <div class="flex items-center gap-2">
+            <span class="text-3xl">🎰</span>
+            <h1 class="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 via-pink-400 to-cyan-400">
+                LUCKY COUPON MACHINE
+            </h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="sound-toggle-btn" class="p-2 md:px-3 md:py-1.5 bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-600 text-xs md:text-sm flex items-center gap-1.5 transition">
+                <span id="sound-icon">🔊</span>
+                <span class="hidden sm:inline">サウンド: </span>
+                <span id="sound-status" class="font-bold text-green-400">ON</span>
+            </button>
+            <button id="history-btn" class="p-2 md:px-3 md:py-1.5 bg-purple-900/80 hover:bg-purple-800 rounded-xl border border-purple-500 text-xs md:text-sm flex items-center gap-1.5 transition">
+                <span>🎟️</span>
+                <span>履歴 <span id="history-count">0</span>枚</span>
+            </button>
+            <button id="settings-btn" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-600 text-xs md:text-sm transition">
+                ⚙️
+            </button>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ領域 -->
+    <main class="flex-1 flex flex-col items-center justify-center p-4 z-10 max-w-4xl mx-auto w-full">
+
+        <!-- 筐体外枠 -->
+        <div class="w-full max-w-md bg-gradient-to-b from-slate-900 via-purple-950 to-slate-900 rounded-3xl p-6 border-4 border-purple-500/50 neon-box-purple relative shadow-2xl">
+            
+            <!-- 上部看板ネオン -->
+            <div class="bg-black/60 rounded-2xl p-3 mb-6 text-center border border-purple-400/30 relative overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-purple-500/10 to-transparent animate-pulse"></div>
+                <div class="text-xs text-purple-300 font-bold tracking-widest uppercase mb-1" id="store-display-name">STORE: SPECIAL SHOP</div>
+                <div id="machine-subtitle" class="text-lg md:text-xl font-black text-yellow-300 neon-text-gold">
+                    ★ 運命の割引クーポン ★
+                </div>
+            </div>
+
+            <!-- ドラムディスプレイ (表示部) -->
+            <div class="bg-slate-950 rounded-2xl p-4 mb-6 border-2 border-slate-700 relative overflow-hidden shadow-inner flex flex-col items-center justify-center min-h-[160px]">
+                
+                <!-- ディスプレイ内グリッド線演出 -->
+                <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none"></div>
+
+                <!-- 回転ドラム / 表示テキスト -->
+                <div id="display-container" class="text-center transition-all duration-200">
+                    <div id="status-badge" class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-slate-800 text-slate-400 mb-2 border border-slate-700">
+                        READY TO SPIN
+                    </div>
+                    <div id="coupon-value-display" class="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-300 to-indigo-400 my-2 min-h-[60px] flex items-center justify-center">
+                        PRESS SWITCH!
+                    </div>
+                    <div id="coupon-type-display" class="text-sm font-bold text-slate-400">
+                        ボタンを押してクーポンを発行しよう！
+                    </div>
+                </div>
+
+                <!-- スロット回転中のオーバーレイ演出 -->
+                <div id="spinning-overlay" class="hidden absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center backdrop-blur-sm">
+                    <div class="text-5xl mb-2 animate-bounce">🎰</div>
+                    <div class="text-yellow-400 font-bold text-xl pixel-font tracking-wider animate-pulse">SPINNING...</div>
+                    <div class="w-3/4 bg-slate-800 h-2 rounded-full mt-4 overflow-hidden border border-slate-700">
+                        <div id="spin-progress" class="bg-gradient-to-r from-yellow-400 to-pink-500 h-full w-0 transition-all duration-75"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 操作部 (スイッチ & レバー) -->
+            <div class="grid grid-cols-3 gap-4 items-center pt-2">
+                
+                <!-- オプション切替ボタン -->
+                <div class="col-span-1 flex flex-col gap-2">
+                    <button id="mode-toggle-btn" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-2.5 px-2 rounded-xl border border-slate-600 font-bold flex flex-col items-center justify-center gap-1 transition active:scale-95">
+                        <span class="text-slate-400 text-[10px]">表示形式</span>
+                        <span id="mode-text" class="text-cyan-400 font-black">ランダム</span>
+                    </button>
+                </div>
+
+                <!-- メインPUSHボタン -->
+                <div class="col-span-2 flex justify-center items-center relative">
+                    <button id="spin-button" class="arcade-button w-full bg-gradient-to-b from-red-500 to-red-700 hover:from-red-400 hover:to-red-600 text-white font-black text-xl md:text-2xl py-5 px-6 rounded-2xl border-2 border-red-300 flex items-center justify-center gap-2 group cursor-pointer">
+                        <span class="group-hover:scale-125 transition-transform">⚡</span>
+                        <span>発行スイッチ</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 機体下部デコレーション -->
+            <div class="mt-6 flex justify-between items-center text-[10px] text-slate-500 border-t border-slate-800 pt-3">
+                <span>SERIAL: CPM-2026-X</span>
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-500 animate-ping"></span> ONLINE</span>
+            </div>
+        </div>
+    </main>
+
+    <!-- クーポン獲得結果ポップアップモーダル -->
+    <div id="result-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden items-center justify-center p-4 z-40 transition-opacity duration-300 opacity-0">
+        <div id="result-card" class="w-full max-w-sm bg-white text-slate-900 rounded-3xl p-6 shadow-2xl relative transform scale-90 transition-transform duration-300 border-4 border-yellow-400 overflow-hidden">
+            
+            <!-- 背景キラキラ装飾 -->
+            <div id="rarity-bg-glow" class="absolute -inset-1 bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 opacity-30 blur-lg -z-10"></div>
+            
+            <!-- レアリティバッジ -->
+            <div class="flex justify-between items-start mb-4">
+                <div id="result-rarity-badge" class="px-3 py-1 rounded-full text-xs font-black text-white bg-slate-800 tracking-wider shadow">
+                    RARE: NORMAL
+                </div>
+                <button id="close-result-x" class="text-slate-400 hover:text-slate-600 text-xl font-bold w-8 h-8 rounded-full flex items-center justify-center bg-slate-100">
+                    ✕
+                </button>
+            </div>
+
+            <!-- チケット本体 -->
+            <div class="border-2 border-dashed border-slate-300 rounded-2xl p-4 bg-gradient-to-b from-amber-50/50 to-orange-50/30 relative">
+                <div class="text-center">
+                    <p id="result-store-name" class="text-xs font-bold text-slate-500 tracking-wider">SPECIAL COUPON</p>
+                    <h3 class="text-lg font-black text-slate-800 mt-1 mb-2">ご当選クーポン</h3>
+                    
+                    <!-- 値引き大文字表示 -->
+                    <div class="my-4 py-2 bg-white rounded-xl shadow-inner border border-amber-200">
+                        <div id="result-value" class="text-5xl font-black text-red-600 tracking-tight">
+                            50% OFF
+                        </div>
+                        <div id="result-subtext" class="text-xs font-bold text-amber-700 mt-1">
+                            5割引きクーポン
+                        </div>
+                    </div>
+
+                    <!-- 有効期限 & 条件 -->
+                    <div class="text-xs text-slate-600 space-y-1 my-3 bg-amber-100/50 p-2 rounded-lg">
+                        <p>コード: <span id="result-code" class="font-mono font-bold text-slate-800">CPN-8849-XXXX</span></p>
+                        <p>有効期限: <span id="result-expiry" class="font-bold">本日限り有効</span></p>
+                    </div>
+
+                    <!-- バーコード演出 -->
+                    <div class="mt-4 pt-3 border-t border-slate-200 flex flex-col items-center">
+                        <div class="h-10 w-full bg-[repeating-linear-gradient(90deg,#000,#000_2px,#fff_2px,#fff_5px,#000_5px,#000_9px)] rounded"></div>
+                        <span class="text-[9px] font-mono text-slate-400 mt-1">PRESENT THIS AT CHECKOUT</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- アクションボタン群 -->
+            <div class="mt-5 space-y-2">
+                <button id="copy-code-btn" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-md">
+                    <span>📋</span>
+                    <span id="copy-btn-text">クーポンコードをコピー</span>
+                </button>
+                <button id="draw-again-btn" class="w-full bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-slate-950 font-black py-3 rounded-xl transition text-sm shadow">
+                    もう一度マシンを回す 🎰
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 履歴・図鑑モーダル -->
+    <div id="history-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden items-center justify-center p-4 z-40">
+        <div class="w-full max-w-lg bg-slate-900 text-white rounded-3xl p-6 shadow-2xl border border-slate-700 flex flex-col max-h-[80vh]">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
+                <h2 class="text-lg font-bold flex items-center gap-2">
+                    <span>🎟️</span> 獲得クーポン履歴
+                </h2>
+                <button id="close-history-btn" class="text-slate-400 hover:text-white text-xl font-bold">✕</button>
+            </div>
+
+            <div id="history-list" class="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
+                <!-- 履歴アイテムがここに挿入されます -->
+                <div class="text-center text-slate-500 py-8">まだクーポンを獲得していません。</div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center">
+                <button id="clear-history-btn" class="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1.5 rounded-lg bg-red-950/40 border border-red-900/50">
+                    履歴を消去
+                </button>
+                <span class="text-xs text-slate-400">Total: <span id="total-saved-count" class="font-bold text-white">0</span> 枚</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- カスタム設定モーダル -->
+    <div id="settings-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden items-center justify-center p-4 z-40">
+        <div class="w-full max-w-md bg-slate-900 text-white rounded-3xl p-6 shadow-2xl border border-slate-700">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
+                <h2 class="text-lg font-bold flex items-center gap-2">
+                    <span>⚙️</span> マシンカスタム設定
+                </h2>
+                <button id="close-settings-btn" class="text-slate-400 hover:text-white text-xl font-bold">✕</button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">店舗名 / イベント名</label>
+                    <input type="text" id="setting-store-input" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500" value="SPECIAL SHOP">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">クーポンの最大割引上限</label>
+                    <select id="setting-max-discount" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500">
+                        <option value="99">上限: 99% / 9.9割 (超激レア演出あり)</option>
+                        <option value="90">上限: 90% / 9割</option>
+                        <option value="50">上限: 50% / 5割</option>
+                        <option value="30">上限: 30% / 3割</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-800 text-xs text-slate-400 space-y-1">
+                    <p class="font-bold text-slate-300">💡 確率について:</p>
+                    <p>・UR : 確率 3%</p>
+                    <p>・SSR : 確率 12%</p>
+                    <p>・SR : 確率 25%</p>
+                    <p>・R : 確率 35%</p>
+                    <p>・N : 確率 25%</p>
+                </div>
+            </div>
+
+            <div class="mt-6">
+                <button id="save-settings-btn" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 rounded-xl transition text-sm">
+                    設定を保存
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知トーストメッセージ -->
+    <div id="toast-message" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white text-xs md:text-sm px-4 py-2.5 rounded-full border border-slate-600 shadow-xl opacity-0 transition-opacity duration-300 pointer-events-none z-50 flex items-center gap-2">
+        <span id="toast-icon">✨</span>
+        <span id="toast-text">メッセージ</span>
+    </div>
+
+    <!-- フッター -->
+    <footer class="w-full text-center p-4 text-xs text-slate-500 z-10">
+        <p>© 2026 LUCKY COUPON MACHINE - Free Arcade Mini Game</p>
+    </footer>
+
+    <!-- JavaScript ロジック -->
+    <script>
+        // --- アプリケーションの状態管理 ---
+        const state = {
+            soundEnabled: true,
+            displayMode: 'random', // 'random', 'percent', 'waribiki'
+            storeName: 'SPECIAL SHOP',
+            maxDiscountCap: 99,
+            isSpinning: false,
+            history: [],
+            currentCoupon: null
+        };
+
+        // --- DOMエレメントの取得 ---
+        const spinBtn = document.getElementById('spin-button');
+        const modeToggleBtn = document.getElementById('mode-toggle-btn');
+        const modeText = document.getElementById('mode-text');
+        const soundToggleBtn = document.getElementById('sound-toggle-btn');
+        const soundStatus = document.getElementById('sound-status');
+        const soundIcon = document.getElementById('sound-icon');
+        const historyBtn = document.getElementById('history-btn');
+        const historyCount = document.getElementById('history-count');
+        const settingsBtn = document.getElementById('settings-btn');
+        const storeDisplayName = document.getElementById('store-display-name');
+
+        const couponValueDisplay = document.getElementById('coupon-value-display');
+        const couponTypeDisplay = document.getElementById('coupon-type-display');
+        const statusBadge = document.getElementById('status-badge');
+        const spinningOverlay = document.getElementById('spinning-overlay');
+        const spinProgress = document.getElementById('spin-progress');
+
+        const resultModal = document.getElementById('result-modal');
+        const resultCard = document.getElementById('result-card');
+        const closeResultX = document.getElementById('close-result-x');
+        const drawAgainBtn = document.getElementById('draw-again-btn');
+        const copyCodeBtn = document.getElementById('copy-code-btn');
+        const copyBtnText = document.getElementById('copy-btn-text');
+
+        const resultRarityBadge = document.getElementById('result-rarity-badge');
+        const resultStoreName = document.getElementById('result-store-name');
+        const resultValue = document.getElementById('result-value');
+        const resultSubtext = document.getElementById('result-subtext');
+        const resultCode = document.getElementById('result-code');
+        const resultExpiry = document.getElementById('result-expiry');
+
+        const historyModal = document.getElementById('history-modal');
+        const closeHistoryBtn = document.getElementById('close-history-btn');
+        const historyList = document.getElementById('history-list');
+        const clearHistoryBtn = document.getElementById('clear-history-btn');
+        const totalSavedCount = document.getElementById('total-saved-count');
+
+        const settingsModal = document.getElementById('settings-modal');
+        const closeSettingsBtn = document.getElementById('close-settings-btn');
+        const saveSettingsBtn = document.getElementById('save-settings-btn');
+        const settingStoreInput = document.getElementById('setting-store-input');
+        const settingMaxDiscount = document.getElementById('setting-max-discount');
+
+        const toastMessage = document.getElementById('toast-message');
+        const toastText = document.getElementById('toast-text');
+        const toastIcon = document.getElementById('toast-icon');
+
+        // --- サウンドエンジン (Web Audio API) ---
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            }
+
+            playClick() {
+                if (!state.soundEnabled) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.05);
+            }
+
+            playSpinTick() {
+                if (!state.soundEnabled) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800 + Math.random() * 400, this.ctx.currentTime);
+                gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.03);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.03);
+            }
+
+            playWin(rarity) {
+                if (!state.soundEnabled) return;
+                this.init();
+                
+                const now = this.ctx.currentTime;
+                const notes = rarity === 'UR' || rarity === 'SSR' 
+                    ? [523.25, 659.25, 783.99, 1046.50, 1318.51] // High Fanfare
+                    : [392.00, 493.88, 587.33, 783.99]; // Standard Win
+
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                    gain.gain.setValueAtTime(0.15, now + idx * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.3);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.08);
+                    osc.stop(now + idx * 0.08 + 0.3);
+                });
+            }
+        }
+
+        const sound = new SoundEngine();
+
+        // --- パーティクルエフェクト (Canvas) ---
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.size = Math.random() * 8 + 4;
+                this.vx = (Math.random() - 0.5) * 12;
+                this.vy = (Math.random() - 0.8) * 12;
+                this.gravity = 0.3;
+                this.alpha = 1;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.vRot = (Math.random() - 0.5) * 0.2;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += this.gravity;
+                this.alpha -= 0.015;
+                this.rotation += this.vRot;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.fillStyle = this.color;
+                ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+                ctx.restore();
+            }
+        }
+
+        function triggerConfetti() {
+            const colors = ['#f43f5e', '#ec4899', '#d946ef', '#a855f7', '#6366f1', '#3b82f6', '#eab308'];
+            const startX = window.innerWidth / 2;
+            const startY = window.innerHeight / 2;
+
+            for (let i = 0; i < 80; i++) {
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                particles.push(new Particle(startX, startY, color));
+            }
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles = particles.filter(p => p.alpha > 0);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
+        // --- クーポンロジック ---
+        function generateCoupon() {
+            // レアリティ決定
+            const rand = Math.random() * 100;
+            let rarity = 'N';
+            let percentValue = 10;
+
+            if (rand < 3 && state.maxDiscountCap >= 80) {
+                rarity = 'UR'; // 80〜99%
+                percentValue = Math.floor(Math.random() * (state.maxDiscountCap - 80 + 1)) + 80;
+            } else if (rand < 15 && state.maxDiscountCap >= 50) {
+                rarity = 'SSR'; // 50〜79%
+                const maxVal = Math.min(state.maxDiscountCap, 79);
+                percentValue = Math.floor(Math.random() * (maxVal - 50 + 1)) + 50;
+            } else if (rand < 40 && state.maxDiscountCap >= 30) {
+                rarity = 'SR'; // 30〜49%
+                const maxVal = Math.min(state.maxDiscountCap, 49);
+                percentValue = Math.floor(Math.random() * (maxVal - 30 + 1)) + 30;
+            } else if (rand < 75) {
+                rarity = 'R'; // 15〜29%
+                const maxVal = Math.min(state.maxDiscountCap, 29);
+                percentValue = Math.floor(Math.random() * (maxVal - 15 + 1)) + 15;
+            } else {
+                rarity = 'N'; // 1〜14%
+                percentValue = Math.floor(Math.random() * 14) + 1;
+            }
+
+            // 表示形式の判定
+            let type = state.displayMode;
+            if (type === 'random') {
+                type = Math.random() > 0.5 ? 'percent' : 'waribiki';
+            }
+
+            // 割引（割・分）表記の算出
+            // 例: 75% -> 7.5割引, 50% -> 5割引
+            const wariVal = (percentValue / 10).toFixed(1).replace('.0', '');
+
+            const code = 'CPN-' + Math.floor(1000 + Math.random() * 9000) + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+            const timestamp = new Date();
+            const expiryDate = new Date(timestamp.getTime() + 7 * 24 * 60 * 60 * 1000);
+            const expiryString = `${expiryDate.getFullYear()}/${expiryDate.getMonth() + 1}/${expiryDate.getDate()}`;
+
+            return {
+                id: Date.now(),
+                rarity: rarity,
+                percent: percentValue,
+                wari: wariVal,
+                displayType: type,
+                code: code,
+                expiry: expiryString,
+                createdAt: timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+        }
+
+        // --- マシン回転演出 ---
+        function startSpin() {
+            if (state.isSpinning) return;
+            state.isSpinning = true;
+            sound.playClick();
+
+            spinBtn.disabled = true;
+            spinBtn.classList.add('opacity-75', 'cursor-not-allowed');
+
+            spinningOverlay.classList.remove('hidden');
+            spinProgress.style.width = '0%';
+
+            // ダミー回転数値アニメーション
+            let progress = 0;
+            const spinInterval = setInterval(() => {
+                progress += 5;
+                spinProgress.style.width = `${progress}%`;
+                sound.playSpinTick();
+
+                // ディスプレイ上のダミー数値シャッフル
+                const dummyPercent = Math.floor(Math.random() * 99) + 1;
+                if (Math.random() > 0.5) {
+                    couponValueDisplay.textContent = `${dummyPercent}% OFF`;
+                } else {
+                    couponValueDisplay.textContent = `${(dummyPercent / 10).toFixed(1)}割引き`;
+                }
+
+                if (progress >= 100) {
+                    clearInterval(spinInterval);
+                    finishSpin();
+                }
+            }, 50);
+        }
+
+        function finishSpin() {
+            const coupon = generateCoupon();
+            state.currentCoupon = coupon;
+            state.history.unshift(coupon);
+            updateHistoryUI();
+
+            spinningOverlay.classList.add('hidden');
+            state.isSpinning = false;
+            spinBtn.disabled = false;
+            spinBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+
+            // メイン表示更新
+            statusBadge.textContent = `RESULT: ${coupon.rarity}`;
+            statusBadge.className = `inline-block px-3 py-1 rounded-full text-xs font-bold mb-2 border ${getRarityBadgeClass(coupon.rarity)}`;
+
+            if (coupon.displayType === 'percent') {
+                couponValueDisplay.textContent = `${coupon.percent}% OFF`;
+                couponTypeDisplay.textContent = `特別限定 %OFFクーポン`;
+            } else {
+                couponValueDisplay.textContent = `${coupon.wari}割引き`;
+                couponTypeDisplay.textContent = `特別限定 割引クーポン`;
+            }
+
+            // 音＆紙吹雪演出
+            sound.playWin(coupon.rarity);
+            if (coupon.rarity === 'UR' || coupon.rarity === 'SSR') {
+                triggerConfetti();
+            }
+
+            // 結果モーダル表示
+            showResultModal(coupon);
+        }
+
+        function getRarityBadgeClass(rarity) {
+            switch (rarity) {
+                case 'UR': return 'bg-pink-900/80 text-pink-300 border-pink-500 animate-pulse';
+                case 'SSR': return 'bg-purple-900/80 text-purple-300 border-purple-500';
+                case 'SR': return 'bg-yellow-900/80 text-yellow-300 border-yellow-500';
+                case 'R': return 'bg-blue-900/80 text-blue-300 border-blue-500';
+                default: return 'bg-slate-800 text-slate-400 border-slate-700';
+            }
+        }
+
+        // --- モーダル制御 ---
+        function showResultModal(coupon) {
+            resultStoreName.textContent = state.storeName;
+            resultCode.textContent = coupon.code;
+            resultExpiry.textContent = coupon.expiry;
+            resultRarityBadge.textContent = `RANK: ${coupon.rarity}`;
+            resultRarityBadge.className = `px-3 py-1 rounded-full text-xs font-black text-white tracking-wider shadow ${getRarityBgColor(coupon.rarity)}`;
+
+            if (coupon.displayType === 'percent') {
+                resultValue.textContent = `${coupon.percent}% OFF`;
+                resultSubtext.textContent = `特別優待 %OFFチケット`;
+            } else {
+                resultValue.textContent = `${coupon.wari}割引き`;
+                resultSubtext.textContent = `特別優待 割引チケット`;
+            }
+
+            // カードのカードグロー
+            const rarityGlow = document.getElementById('rarity-bg-glow');
+            if (coupon.rarity === 'UR') {
+                resultCard.className = "w-full max-w-sm bg-white text-slate-900 rounded-3xl p-6 shadow-2xl relative transform transition-all duration-300 border-4 border-pink-500 ur-glow";
+            } else if (coupon.rarity === 'SSR') {
+                resultCard.className = "w-full max-w-sm bg-white text-slate-900 rounded-3xl p-6 shadow-2xl relative transform transition-all duration-300 border-4 border-purple-500";
+            } else {
+                resultCard.className = "w-full max-w-sm bg-white text-slate-900 rounded-3xl p-6 shadow-2xl relative transform transition-all duration-300 border-4 border-amber-400";
+            }
+
+            resultModal.classList.remove('hidden');
+            resultModal.classList.add('flex');
+            setTimeout(() => {
+                resultModal.classList.remove('opacity-0');
+                resultCard.classList.remove('scale-90');
+                resultCard.classList.add('scale-100');
+            }, 10);
+        }
+
+        function hideResultModal() {
+            resultModal.classList.add('opacity-0');
+            resultCard.classList.remove('scale-100');
+            resultCard.classList.add('scale-90');
+            setTimeout(() => {
+                resultModal.classList.remove('flex');
+                resultModal.classList.add('hidden');
+            }, 300);
+        }
+
+        function getRarityBgColor(rarity) {
+            switch (rarity) {
+                case 'UR': return 'bg-gradient-to-r from-pink-500 to-purple-600';
+                case 'SSR': return 'bg-gradient-to-r from-purple-600 to-indigo-600';
+                case 'SR': return 'bg-gradient-to-r from-amber-500 to-yellow-600';
+                case 'R': return 'bg-gradient-to-r from-blue-500 to-cyan-600';
+                default: return 'bg-slate-700';
+            }
+        }
+
+        // --- 履歴 UI 更新 ---
+        function updateHistoryUI() {
+            historyCount.textContent = state.history.length;
+            totalSavedCount.textContent = state.history.length;
+
+            if (state.history.length === 0) {
+                historyList.innerHTML = '<div class="text-center text-slate-500 py-8">まだクーポンを獲得していません。</div>';
+                return;
+            }
+
+            historyList.innerHTML = state.history.map(item => `
+                <div class="bg-slate-800/90 border border-slate-700 rounded-2xl p-3.5 flex items-center justify-between shadow-sm hover:border-slate-600 transition">
+                    <div class="flex items-center gap-3">
+                        <div class="px-2.5 py-1 rounded-xl text-xs font-black text-white ${getRarityBgColor(item.rarity)} flex items-center justify-center min-w-[45px]">
+                            ${item.rarity}
+                        </div>
+                        <div>
+                            <div class="font-black text-base text-yellow-300">
+                                ${item.displayType === 'percent' ? item.percent + '% OFF' : item.wari + '割引き'}
+                            </div>
+                            <div class="text-[10px] text-slate-400 font-mono">
+                                ${item.code} • ${item.createdAt}
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="copyToClipboard('${item.code}')" class="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 text-xs font-bold rounded-lg text-slate-200 transition">
+                        コピー
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // --- クリップボード コピー ---
+        window.copyToClipboard = function(text) {
+            sound.playClick();
+            const dummy = document.createElement('textarea');
+            document.body.appendChild(dummy);
+            dummy.value = text;
+            dummy.select();
+            document.execCommand('copy');
+            document.body.removeChild(dummy);
+
+            showToast('コードをコピーしました！', '📋');
+        };
+
+        // --- トースト表示 ---
+        function showToast(message, icon = '✨') {
+            toastText.textContent = message;
+            toastIcon.textContent = icon;
+            toastMessage.classList.remove('opacity-0', 'pointer-events-none');
+            toastMessage.classList.add('opacity-100');
+
+            setTimeout(() => {
+                toastMessage.classList.remove('opacity-100');
+                toastMessage.classList.add('opacity-0', 'pointer-events-none');
+            }, 2500);
+        }
+
+        // --- イベントリスナーの登録 ---
+        spinBtn.addEventListener('click', () => startSpin());
+        drawAgainBtn.addEventListener('click', () => {
+            hideResultModal();
+            setTimeout(() => startSpin(), 350);
+        });
+
+        // 表示モード切り替え
+        modeToggleBtn.addEventListener('click', () => {
+            sound.playClick();
+            if (state.displayMode === 'random') {
+                state.displayMode = 'percent';
+                modeText.textContent = '%引きのみ';
+            } else if (state.displayMode === 'percent') {
+                state.displayMode = 'waribiki';
+                modeText.textContent = '割引のみ';
+            } else {
+                state.displayMode = 'random';
+                modeText.textContent = 'ランダム';
+            }
+            showToast(`表示形式を [${modeText.textContent}] に設定しました`);
+        });
+
+        // サウンドON/OFF
+        soundToggleBtn.addEventListener('click', () => {
+            state.soundEnabled = !state.soundEnabled;
+            soundStatus.textContent = state.soundEnabled ? 'ON' : 'OFF';
+            soundStatus.className = state.soundEnabled ? 'font-bold text-green-400' : 'font-bold text-slate-500';
+            soundIcon.textContent = state.soundEnabled ? '🔊' : '🔇';
+            if (state.soundEnabled) sound.playClick();
+        });
+
+        // 履歴モーダル
+        historyBtn.addEventListener('click', () => {
+            sound.playClick();
+            historyModal.classList.remove('hidden');
+            historyModal.classList.add('flex');
+        });
+        closeHistoryBtn.addEventListener('click', () => {
+            sound.playClick();
+            historyModal.classList.remove('flex');
+            historyModal.classList.add('hidden');
+        });
+
+        clearHistoryBtn.addEventListener('click', () => {
+            if (state.history.length === 0) return;
+            sound.playClick();
+            state.history = [];
+            updateHistoryUI();
+            showToast('履歴を消去しました');
+        });
+
+        // 設定モーダル
+        settingsBtn.addEventListener('click', () => {
+            sound.playClick();
+            settingStoreInput.value = state.storeName;
+            settingMaxDiscount.value = state.maxDiscountCap;
+            settingsModal.classList.remove('hidden');
+            settingsModal.classList.add('flex');
+        });
+
+        closeSettingsBtn.addEventListener('click', () => {
+            sound.playClick();
+            settingsModal.classList.remove('flex');
+            settingsModal.classList.add('hidden');
+        });
+
+        saveSettingsBtn.addEventListener('click', () => {
+            sound.playClick();
+            state.storeName = settingStoreInput.value.trim() || 'SPECIAL SHOP';
+            state.maxDiscountCap = parseInt(settingMaxDiscount.value, 10);
+            storeDisplayName.textContent = `STORE: ${state.storeName.toUpperCase()}`;
+            settingsModal.classList.remove('flex');
+            settingsModal.classList.add('hidden');
+            showToast('設定を保存しました');
+        });
+
+        // 結果モーダルの操作
+        closeResultX.addEventListener('click', hideResultModal);
+        copyCodeBtn.addEventListener('click', () => {
+            if (state.currentCoupon) {
+                copyToClipboard(state.currentCoupon.code);
+            }
+        });
+
+        // モーダル背景クリック閉じる処理
+        [resultModal, historyModal, settingsModal].forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    sound.playClick();
+                    if (modal === resultModal) hideResultModal();
+                    else {
+                        modal.classList.remove('flex');
+                        modal.classList.add('hidden');
+                    }
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>
