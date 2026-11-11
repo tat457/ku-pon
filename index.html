@@ -201,6 +201,25 @@
                 </button>
             </div>
 
+            <!-- ランダム対象商品カード -->
+            <div id="result-product-card" class="mb-4 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-2xl p-3 border border-slate-700 shadow-md flex items-center gap-3">
+                <div id="result-product-icon" class="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-3xl shadow-inner flex-shrink-0">
+                    🎁
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-[10px] text-amber-400 font-bold uppercase tracking-wider flex justify-between">
+                        <span>当選対象商品</span>
+                        <span id="result-product-category" class="text-slate-400">家電・PC</span>
+                    </div>
+                    <div id="result-product-name" class="font-black text-sm truncate text-slate-100">
+                        最新ハイスペックノートPC
+                    </div>
+                    <div class="flex items-baseline gap-2 mt-0.5">
+                        <span class="text-xs text-slate-300">定価: <span id="result-product-original-price" class="font-bold text-slate-100">¥180,000</span></span>
+                    </div>
+                </div>
+            </div>
+
             <!-- チケット本体 -->
             <div class="border-2 border-dashed border-slate-300 rounded-2xl p-4 bg-gradient-to-b from-amber-50/50 to-orange-50/30 relative">
                 <div class="text-center">
@@ -336,6 +355,39 @@
             currentCoupon: null
         };
 
+        // --- ランダム商品リストデータ (飲料・食品を大幅追加 / 定価9,999円未満) ---
+        const PRODUCTS = [
+            // 飲料
+            { name: 'プレミアムクラフトビールセット', price: 3500, icon: '🍺', category: '飲料', bg: 'from-amber-500 to-yellow-600' },
+            { name: '濃厚宇治抹茶＆高級緑茶セット', price: 2800, icon: '🍵', category: '飲料', bg: 'from-emerald-600 to-teal-700' },
+            { name: '厳選スパークリングワイン', price: 4200, icon: '🍾', category: '飲料', bg: 'from-yellow-400 to-amber-500' },
+            { name: '果汁100%プレミアムジュース詰め合わせ', price: 3200, icon: '🧃', category: '飲料', bg: 'from-orange-400 to-pink-500' },
+            { name: 'クラフトコーラ＆サイダーアソート', price: 2600, icon: '🥤', category: '飲料', bg: 'from-amber-700 to-red-600' },
+            { name: 'アロマコーヒー豆セット', price: 2400, icon: '☕', category: '飲料', bg: 'from-amber-800 to-amber-950' },
+
+            // 食品
+            { name: '本格有名店ラーメン食べ比べセット', price: 2980, icon: '🍜', category: '食品', bg: 'from-red-600 to-orange-600' },
+            { name: '特選黒毛和牛カレーセット', price: 3400, icon: '🍛', category: '食品', bg: 'from-amber-700 to-amber-900' },
+            { name: '炭火焼き鳥おつまみ盛り合わせ', price: 2700, icon: '🍢', category: '食品', bg: 'from-red-500 to-amber-600' },
+            { name: '新鮮お刺身パック詰め合わせ', price: 4500, icon: '🐟', category: '食品', bg: 'from-blue-500 to-cyan-600' },
+            { name: '極上生食パン2本＆特製ジャム', price: 2200, icon: '🍞', category: '食品', bg: 'from-amber-400 to-orange-400' },
+            { name: '職人仕込み手打ちそばセット', price: 2500, icon: '🥢', category: '食品', bg: 'from-stone-600 to-stone-800' },
+            { name: '窯焼きナポリピッツァ3枚セット', price: 3600, icon: '🍕', category: '食品', bg: 'from-red-500 to-yellow-500' },
+            { name: '特選ハンバーグギフトセット', price: 4800, icon: '🥩', category: '食品', bg: 'from-red-600 to-rose-700' },
+            { name: '特上寿司盛り合わせ', price: 3200, icon: '🍣', category: '食品', bg: 'from-rose-500 to-red-600' },
+
+            // スイーツ・日用品・ガジェット
+            { name: 'パティシエ特製ホールケーキ', price: 3800, icon: '🍰', category: 'スイーツ', bg: 'from-pink-400 to-rose-500' },
+            { name: '贅沢フルーツパフェセット', price: 3900, icon: '🍨', category: 'スイーツ', bg: 'from-pink-500 to-purple-500' },
+            { name: '贅沢焼き菓子アソート', price: 1500, icon: '🍪', category: 'スイーツ', bg: 'from-orange-400 to-amber-500' },
+            { name: 'ワイヤレスイヤホン', price: 4980, icon: '🎧', category: 'ガジェット', bg: 'from-cyan-500 to-blue-600' },
+            { name: 'スマートフィットネスバンド', price: 7980, icon: '⌚', category: 'ガジェット', bg: 'from-emerald-500 to-teal-600' },
+            { name: '急速充電スタンド', price: 2980, icon: '📱', category: 'ガジェット', bg: 'from-fuchsia-500 to-purple-600' },
+            { name: 'ポータブルBluetoothスピーカー', price: 5800, icon: '🔊', category: '家電', bg: 'from-purple-500 to-pink-600' },
+            { name: 'アロマディフューザーセット', price: 8900, icon: '✨', category: '生活雑貨', bg: 'from-yellow-400 to-amber-600' },
+            { name: '高級ステンレスボトル', price: 1980, icon: '🥤', category: '日用品', bg: 'from-blue-400 to-cyan-500' }
+        ];
+
         // --- DOMエレメントの取得 ---
         const spinBtn = document.getElementById('spin-button');
         const modeToggleBtn = document.getElementById('mode-toggle-btn');
@@ -367,6 +419,11 @@
         const resultSubtext = document.getElementById('result-subtext');
         const resultCode = document.getElementById('result-code');
         const resultExpiry = document.getElementById('result-expiry');
+
+        const resultProductIcon = document.getElementById('result-product-icon');
+        const resultProductCategory = document.getElementById('result-product-category');
+        const resultProductName = document.getElementById('result-product-name');
+        const resultProductOriginalPrice = document.getElementById('result-product-original-price');
 
         const historyModal = document.getElementById('history-modal');
         const closeHistoryBtn = document.getElementById('close-history-btn');
@@ -555,8 +612,10 @@
             }
 
             // 割引（割・分）表記の算出
-            // 例: 75% -> 7.5割引, 50% -> 5割引
             const wariVal = (percentValue / 10).toFixed(1).replace('.0', '');
+
+            // ランダム商品の決定
+            const randomProduct = PRODUCTS[Math.floor(Math.random() * PRODUCTS.length)];
 
             const code = 'CPN-' + Math.floor(1000 + Math.random() * 9000) + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
             const timestamp = new Date();
@@ -569,6 +628,7 @@
                 percent: percentValue,
                 wari: wariVal,
                 displayType: type,
+                product: randomProduct,
                 code: code,
                 expiry: expiryString,
                 createdAt: timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -660,6 +720,15 @@
             resultRarityBadge.textContent = `RANK: ${coupon.rarity}`;
             resultRarityBadge.className = `px-3 py-1 rounded-full text-xs font-black text-white tracking-wider shadow ${getRarityBgColor(coupon.rarity)}`;
 
+            // 商品カード情報の更新
+            if (coupon.product) {
+                resultProductIcon.textContent = coupon.product.icon;
+                resultProductIcon.className = `w-14 h-14 rounded-xl bg-gradient-to-br ${coupon.product.bg} flex items-center justify-center text-3xl shadow-inner flex-shrink-0`;
+                resultProductCategory.textContent = coupon.product.category;
+                resultProductName.textContent = coupon.product.name;
+                resultProductOriginalPrice.textContent = `¥${coupon.product.price.toLocaleString()}`;
+            }
+
             if (coupon.displayType === 'percent') {
                 resultValue.textContent = `${coupon.percent}% OFF`;
                 resultSubtext.textContent = `特別優待 %OFFチケット`;
@@ -724,11 +793,15 @@
                             ${item.rarity}
                         </div>
                         <div>
-                            <div class="font-black text-base text-yellow-300">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-base">${item.product ? item.product.icon : '🎟️'}</span>
+                                <span class="font-bold text-xs text-slate-200">${item.product ? item.product.name : '対象商品'}</span>
+                            </div>
+                            <div class="font-black text-sm text-yellow-300">
                                 ${item.displayType === 'percent' ? item.percent + '% OFF' : item.wari + '割引き'}
                             </div>
                             <div class="text-[10px] text-slate-400 font-mono">
-                                ${item.code} • ${item.createdAt}
+                                定価: ¥${item.product ? item.product.price.toLocaleString() : '---'}
                             </div>
                         </div>
                     </div>
