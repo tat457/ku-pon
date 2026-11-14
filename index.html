@@ -52,6 +52,24 @@
             box-shadow: 0 0 25px #ec4899, 0 0 50px #8b5cf6;
         }
 
+        @keyframes pop-in {
+            0% { transform: scale(0.7); opacity: 0; }
+            70% { transform: scale(1.06); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop-in {
+            animation: pop-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        @keyframes shake-x {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+        .animate-shake {
+            animation: shake-x 0.35s ease-in-out;
+        }
+
         /* パーティクル用キャンバス */
         #particle-canvas {
             position: fixed;
@@ -183,30 +201,51 @@
             </div>
 
             <!-- ランダム対象商品カード -->
-            <div id="result-product-card" class="mb-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-2xl p-3 border border-slate-700 shadow-md flex items-center gap-3">
-                <div id="result-product-icon" class="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-3xl shadow-inner flex-shrink-0">
-                    🎁
+            <div id="result-product-card" class="mb-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-2xl p-3 border border-slate-700 shadow-md flex items-center gap-3 transition-all duration-300">
+                <div id="result-product-icon" class="w-14 h-14 rounded-xl bg-slate-700 flex items-center justify-center text-3xl shadow-inner flex-shrink-0">
+                    ❓
                 </div>
                 <div class="flex-1 min-w-0">
-                    <div class="text-[10px] text-amber-400 font-bold uppercase tracking-wider flex justify-between">
+                    <div class="text-[10px] text-amber-400 font-bold uppercase tracking-wider flex justify-between items-center">
                         <span>当選対象商品</span>
-                        <span id="result-product-category" class="text-slate-400">飲料</span>
+                        <span id="result-product-category" class="hidden px-2 py-0.5 rounded bg-slate-700 text-amber-300 text-[10px]">飲料</span>
                     </div>
-                    <div id="result-product-name" class="font-black text-sm truncate text-slate-100">
-                        プレミアムクラフトビールセット
+                    <div id="result-product-name" class="font-black text-sm truncate text-slate-400">
+                        ？？？（クーポン使用で公開）
                     </div>
                     <div class="flex items-baseline gap-2 mt-0.5">
-                        <span class="text-xs text-slate-300">定価: <span id="result-product-original-price" class="font-bold text-slate-100">¥3,500</span></span>
+                        <span class="text-xs text-slate-300">定価: <span id="result-product-original-price" class="font-extrabold text-base text-yellow-300">¥3,500</span></span>
                     </div>
                 </div>
             </div>
 
-            <!-- クーポン使用後の割引額表示エリア -->
+            <!-- ステップ1: 割引後の金額を手動入力するチャレンジエリア -->
+            <div id="step1-quiz-box" class="mb-3 bg-indigo-50 border-2 border-indigo-300 rounded-2xl p-3 text-slate-800 shadow-sm">
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-xs font-black text-indigo-800 flex items-center gap-1">🧮 チャレンジ①：割引後の金額を入力</span>
+                    <span id="step1-status-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-200 text-indigo-800">未クリア</span>
+                </div>
+                <p class="text-[11px] text-slate-600 mb-2">
+                    定価からクーポン割引を引いた<span class="font-bold text-indigo-700">割引後の金額（税抜）</span>を当てると「クーポンを使う」が押せます！
+                </p>
+                <div class="flex gap-1.5">
+                    <div class="relative flex-1">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">¥</span>
+                        <input type="text" inputmode="numeric" id="discount-answer-input" placeholder="割引後の金額" class="w-full pl-7 pr-3 py-2 bg-white border-2 border-indigo-200 rounded-xl text-sm font-black text-slate-900 focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <button id="check-discount-btn" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow transition active:scale-95 cursor-pointer whitespace-nowrap">
+                        判定する
+                    </button>
+                </div>
+                <p id="discount-quiz-feedback" class="hidden text-[11px] font-bold mt-1.5"></p>
+            </div>
+
+            <!-- クーポン使用後の割引額表示＆ステップ2エリア -->
             <div id="discount-result-box" class="hidden mb-3 bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-400 rounded-2xl p-3 text-slate-800 shadow-inner transition-all">
                 <div class="flex items-center justify-between text-xs font-bold text-emerald-700 mb-1.5">
                     <span class="flex items-center gap-1">✅ クーポン適用済み</span>
-                    <button id="toggle-tax-btn" class="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-black rounded-lg shadow-sm transition flex items-center gap-1 cursor-pointer">
-                        <span>💴</span>
+                    <button id="toggle-tax-btn" disabled class="px-2.5 py-1 bg-slate-300 text-slate-500 text-[11px] font-black rounded-lg shadow-sm transition flex items-center gap-1 cursor-not-allowed">
+                        <span id="toggle-tax-btn-icon">🔒</span>
                         <span id="toggle-tax-btn-text">税込表示</span>
                     </button>
                 </div>
@@ -221,7 +260,45 @@
                         <span id="result-discount-amount" class="text-2xl font-black text-emerald-600">-¥0</span>
                     </div>
                 </div>
-                <div class="text-[10px] text-emerald-700/80 text-right mt-1">
+
+                <!-- ステップ2: 税込金額を手動入力するチャレンジエリア -->
+                <div id="step2-quiz-area" class="mt-2.5 pt-2.5 border-t border-emerald-200">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-[11px] font-black text-amber-800 flex items-center gap-1">🧾 チャレンジ②：税込金額を入力</span>
+                        <span id="step2-status-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">未クリア</span>
+                    </div>
+                    <p class="text-[10px] text-slate-600 mb-1.5">
+                        公開された商品カテゴリ（<span class="font-bold text-amber-700">飲食料品8% / その他10%</span>）から<span class="font-bold text-amber-800">税込お支払い額</span>を当てると「税込表示」が押せます！
+                    </p>
+                    <div class="flex gap-1.5">
+                        <div class="relative flex-1">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">¥</span>
+                            <input type="text" inputmode="numeric" id="tax-answer-input" placeholder="税込の金額" class="w-full pl-7 pr-3 py-1.5 bg-white border-2 border-amber-300 rounded-xl text-sm font-black text-slate-900 focus:outline-none focus:border-amber-500">
+                        </div>
+                        <button id="check-tax-btn" class="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs rounded-xl shadow transition active:scale-95 cursor-pointer whitespace-nowrap">
+                            判定する
+                        </button>
+                    </div>
+                    <p id="tax-quiz-feedback" class="hidden text-[11px] font-bold mt-1.5"></p>
+                </div>
+
+                <!-- 税込表示達成時の楽しいお祝いイベントバナー -->
+                <div id="fun-event-banner" class="hidden mt-2.5 p-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600 text-white shadow-md animate-pop-in">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <span id="fun-event-emoji" class="text-2xl animate-bounce">🎊</span>
+                            <div>
+                                <div id="fun-event-title" class="text-xs font-black tracking-wide">PERFECT! お買い物マスター達成！</div>
+                                <div id="fun-event-desc" class="text-[10px] text-yellow-100 font-bold">税込計算バッチリ！特別花火フェスティバル開催中！</div>
+                            </div>
+                        </div>
+                        <button id="replay-fireworks-btn" class="px-2 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-[10px] font-black whitespace-nowrap cursor-pointer">
+                            🎆 花火!
+                        </button>
+                    </div>
+                </div>
+
+                <div class="text-[10px] text-emerald-700/80 text-right mt-1.5">
                     ※割引額・消費税額の小数点以下は切り捨て
                 </div>
             </div>
@@ -259,9 +336,9 @@
 
             <!-- アクションボタン群 -->
             <div class="mt-4 space-y-2">
-                <button id="use-coupon-btn" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-md cursor-pointer">
-                    <span>🎟️</span>
-                    <span id="use-coupon-btn-text">クーポンを使う</span>
+                <button id="use-coupon-btn" disabled class="w-full bg-slate-300 text-slate-500 font-black py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-sm cursor-not-allowed">
+                    <span id="use-coupon-btn-icon">🔒</span>
+                    <span id="use-coupon-btn-text">クーポンを使う（割引後額を当てて解除）</span>
                 </button>
                 <button id="copy-code-btn" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2 text-xs shadow cursor-pointer">
                     <span>📋</span>
@@ -469,6 +546,28 @@
             playUseCoupon() {
                 this.playTone(587.33, 'sine', 0.12, 0, 0.15);
                 this.playTone(880.00, 'sine', 0.25, 0.08, 0.15);
+            },
+            playCorrect() {
+                this.playTone(659.25, 'sine', 0.12, 0, 0.18);
+                this.playTone(880.00, 'sine', 0.28, 0.11, 0.18);
+            },
+            playWrong() {
+                this.playTone(180, 'sawtooth', 0.16, 0, 0.14);
+                this.playTone(150, 'sawtooth', 0.22, 0.14, 0.14);
+            },
+            playCelebration() {
+                const melody = [
+                    { f: 523.25, d: 0.12, t: 0.00 },
+                    { f: 659.25, d: 0.12, t: 0.10 },
+                    { f: 783.99, d: 0.12, t: 0.20 },
+                    { f: 1046.50, d: 0.25, t: 0.30 },
+                    { f: 783.99, d: 0.12, t: 0.52 },
+                    { f: 1046.50, d: 0.45, t: 0.65 }
+                ];
+                melody.forEach(n => {
+                    this.playTone(n.f, 'triangle', n.d, n.t, 0.2);
+                    this.playTone(n.f * 0.5, 'sine', n.d, n.t, 0.12);
+                });
             }
         };
 
@@ -510,7 +609,14 @@
         const resultProductName = document.getElementById('result-product-name');
         const resultProductOriginalPrice = document.getElementById('result-product-original-price');
 
+        const step1QuizBox = document.getElementById('step1-quiz-box');
+        const step1StatusBadge = document.getElementById('step1-status-badge');
+        const discountAnswerInput = document.getElementById('discount-answer-input');
+        const checkDiscountBtn = document.getElementById('check-discount-btn');
+        const discountQuizFeedback = document.getElementById('discount-quiz-feedback');
+
         const useCouponBtn = document.getElementById('use-coupon-btn');
+        const useCouponBtnIcon = document.getElementById('use-coupon-btn-icon');
         const useCouponBtnText = document.getElementById('use-coupon-btn-text');
         const discountResultBox = document.getElementById('discount-result-box');
         const resultDiscountAmount = document.getElementById('result-discount-amount');
@@ -518,7 +624,20 @@
         const resultPriceLabel = document.getElementById('result-price-label');
         const resultTaxDetail = document.getElementById('result-tax-detail');
         const toggleTaxBtn = document.getElementById('toggle-tax-btn');
+        const toggleTaxBtnIcon = document.getElementById('toggle-tax-btn-icon');
         const toggleTaxBtnText = document.getElementById('toggle-tax-btn-text');
+
+        const step2QuizArea = document.getElementById('step2-quiz-area');
+        const step2StatusBadge = document.getElementById('step2-status-badge');
+        const taxAnswerInput = document.getElementById('tax-answer-input');
+        const checkTaxBtn = document.getElementById('check-tax-btn');
+        const taxQuizFeedback = document.getElementById('tax-quiz-feedback');
+
+        const funEventBanner = document.getElementById('fun-event-banner');
+        const funEventEmoji = document.getElementById('fun-event-emoji');
+        const funEventTitle = document.getElementById('fun-event-title');
+        const funEventDesc = document.getElementById('fun-event-desc');
+        const replayFireworksBtn = document.getElementById('replay-fireworks-btn');
 
         const historyModal = document.getElementById('history-modal');
         const historyList = document.getElementById('history-list');
@@ -638,12 +757,25 @@
                 wari: wariVal,
                 displayType: type,
                 product: randomProduct,
+                discountUnlocked: false,
                 used: false,
+                taxUnlocked: false,
                 showTaxIncluded: false,
+                eventTriggered: false,
                 code: code,
                 expiry: expiryString,
                 createdAt: timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             };
+        }
+
+        // --- 数値入力の正規化ヘルパー（全角数字対応） ---
+        function parseNumericInput(rawStr) {
+            if (!rawStr) return NaN;
+            const normalized = String(rawStr)
+                .replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
+                .replace(/[,，¥￥\s]/g, '');
+            if (!/^\d+$/.test(normalized)) return NaN;
+            return parseInt(normalized, 10);
         }
 
         // --- 消費税率判定ヘルパー（飲食料品8% / その他10%） ---
@@ -748,13 +880,39 @@
             resultCode.textContent = coupon.code;
             resultExpiry.textContent = coupon.expiry;
 
-            // 対象商品カード反映（定価のみ表示）
+            // 対象商品カードの反映（クーポン使用前はイラスト・商品名・カテゴリを非表示にして定価のみ表示）
             if (coupon.product) {
-                resultProductIcon.textContent = coupon.product.icon;
-                resultProductIcon.className = `w-14 h-14 rounded-xl bg-gradient-to-br ${coupon.product.bg} flex items-center justify-center text-3xl shadow-inner flex-shrink-0`;
-                resultProductCategory.textContent = coupon.product.category;
-                resultProductName.textContent = coupon.product.name;
                 resultProductOriginalPrice.textContent = `¥${coupon.product.price.toLocaleString()}`;
+                if (coupon.used) {
+                    revealProductInfo(coupon, false);
+                } else {
+                    resultProductIcon.textContent = '❓';
+                    resultProductIcon.className = 'w-14 h-14 rounded-xl bg-slate-700 flex items-center justify-center text-3xl shadow-inner flex-shrink-0';
+                    resultProductCategory.textContent = '';
+                    resultProductCategory.classList.add('hidden');
+                    resultProductName.textContent = '？？？（クーポン使用で公開）';
+                    resultProductName.className = 'font-black text-sm truncate text-slate-400';
+                }
+            }
+
+            // ステップ1（割引後額入力）の表示制御
+            discountAnswerInput.value = '';
+            discountQuizFeedback.classList.add('hidden');
+            if (coupon.used) {
+                step1QuizBox.classList.add('hidden');
+            } else {
+                step1QuizBox.classList.remove('hidden');
+                if (coupon.discountUnlocked) {
+                    step1StatusBadge.textContent = 'クリア済み ✨';
+                    step1StatusBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-800';
+                    discountAnswerInput.disabled = true;
+                    checkDiscountBtn.disabled = true;
+                } else {
+                    step1StatusBadge.textContent = '未クリア';
+                    step1StatusBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-200 text-indigo-800';
+                    discountAnswerInput.disabled = false;
+                    checkDiscountBtn.disabled = false;
+                }
             }
 
             // クーポン使用状態リセット / 反映
@@ -762,9 +920,8 @@
                 renderDiscountResult(coupon);
             } else {
                 discountResultBox.classList.add('hidden');
-                useCouponBtn.disabled = false;
-                useCouponBtn.className = 'w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-md cursor-pointer';
-                useCouponBtnText.textContent = 'クーポンを使う';
+                funEventBanner.classList.add('hidden');
+                updateUseCouponButtonState(coupon);
             }
 
             copyBtnText.textContent = 'クーポンコードをコピー';
@@ -777,6 +934,157 @@
                 resultCard.classList.remove('scale-90');
                 resultCard.classList.add('scale-100');
             });
+        }
+
+        // --- 商品情報の公開表示処理 ---
+        function revealProductInfo(coupon, withAnimation = true) {
+            if (!coupon || !coupon.product) return;
+            resultProductIcon.textContent = coupon.product.icon;
+            resultProductIcon.className = `w-14 h-14 rounded-xl bg-gradient-to-br ${coupon.product.bg} flex items-center justify-center text-3xl shadow-inner flex-shrink-0 ${withAnimation ? 'animate-pop-in' : ''}`;
+            resultProductCategory.textContent = coupon.product.category;
+            resultProductCategory.classList.remove('hidden');
+            resultProductName.textContent = coupon.product.name;
+            resultProductName.className = `font-black text-sm truncate text-slate-100 ${withAnimation ? 'animate-pop-in' : ''}`;
+        }
+
+        // --- 「クーポンを使う」ボタンのロック状態更新 ---
+        function updateUseCouponButtonState(coupon) {
+            if (!coupon) return;
+            if (coupon.used) {
+                useCouponBtn.disabled = true;
+                useCouponBtn.className = 'w-full bg-slate-200 text-emerald-700 font-black py-3 rounded-xl flex items-center justify-center gap-2 text-sm border border-emerald-300 cursor-default';
+                useCouponBtnIcon.textContent = '✅';
+                useCouponBtnText.textContent = 'クーポン適用済み';
+            } else if (coupon.discountUnlocked) {
+                useCouponBtn.disabled = false;
+                useCouponBtn.className = 'w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-md cursor-pointer animate-pop-in';
+                useCouponBtnIcon.textContent = '🎟️';
+                useCouponBtnText.textContent = 'クーポンを使う';
+            } else {
+                useCouponBtn.disabled = true;
+                useCouponBtn.className = 'w-full bg-slate-300 text-slate-500 font-black py-3 rounded-xl flex items-center justify-center gap-2 text-sm shadow-sm cursor-not-allowed';
+                useCouponBtnIcon.textContent = '🔒';
+                useCouponBtnText.textContent = 'クーポンを使う（割引後額を当てて解除）';
+            }
+        }
+
+        // --- ステップ1: 割引後の金額判定 ---
+        function checkDiscountAnswer() {
+            const coupon = state.currentCoupon;
+            if (!coupon || coupon.discountUnlocked || coupon.used) return;
+
+            const userVal = parseNumericInput(discountAnswerInput.value);
+            if (isNaN(userVal)) {
+                sound.playWrong();
+                discountQuizFeedback.textContent = '⚠️ 数字で金額を入力してください！';
+                discountQuizFeedback.className = 'text-[11px] font-bold mt-1.5 text-rose-600';
+                discountQuizFeedback.classList.remove('hidden');
+                return;
+            }
+
+            const originalPrice = coupon.product.price;
+            const discountAmount = Math.floor(originalPrice * (coupon.percent / 100));
+            const expectedFinalPrice = originalPrice - discountAmount;
+
+            if (userVal === expectedFinalPrice) {
+                coupon.discountUnlocked = true;
+                sound.playCorrect();
+                step1StatusBadge.textContent = 'クリア済み ✨';
+                step1StatusBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-800';
+                discountAnswerInput.disabled = true;
+                checkDiscountBtn.disabled = true;
+                discountQuizFeedback.textContent = `⭕ 大正解！割引後の金額は ¥${expectedFinalPrice.toLocaleString()} です！「クーポンを使う」を押そう！`;
+                discountQuizFeedback.className = 'text-[11px] font-bold mt-1.5 text-emerald-700';
+                discountQuizFeedback.classList.remove('hidden');
+                updateUseCouponButtonState(coupon);
+                showToast('正解！「クーポンを使う」ボタンが解除されました！', '🎉');
+            } else {
+                sound.playWrong();
+                step1QuizBox.classList.remove('animate-shake');
+                void step1QuizBox.offsetWidth;
+                step1QuizBox.classList.add('animate-shake');
+
+                const hint = userVal > expectedFinalPrice
+                    ? 'もう少し安い金額になります（割引額を引いた後の金額を入力してね）'
+                    : 'もう少し高い金額になります（割引額ではなく、お支払い金額を入力してね）';
+                discountQuizFeedback.textContent = `❌ 不正解！${hint}`;
+                discountQuizFeedback.className = 'text-[11px] font-bold mt-1.5 text-rose-600';
+                discountQuizFeedback.classList.remove('hidden');
+            }
+        }
+
+        // --- ステップ2: 税込金額判定 ---
+        function checkTaxAnswer() {
+            const coupon = state.currentCoupon;
+            if (!coupon || !coupon.used || coupon.taxUnlocked) return;
+
+            const userVal = parseNumericInput(taxAnswerInput.value);
+            if (isNaN(userVal)) {
+                sound.playWrong();
+                taxQuizFeedback.textContent = '⚠️ 数字で税込金額を入力してください！';
+                taxQuizFeedback.className = 'text-[11px] font-bold mt-1.5 text-rose-600';
+                taxQuizFeedback.classList.remove('hidden');
+                return;
+            }
+
+            const originalPrice = coupon.product.price;
+            const discountAmount = Math.floor(originalPrice * (coupon.percent / 100));
+            const finalPrice = originalPrice - discountAmount;
+            const taxInfo = getTaxRateInfo(coupon.product.category);
+            const taxAmount = Math.floor(finalPrice * taxInfo.rate);
+            const expectedTaxIncluded = finalPrice + taxAmount;
+
+            if (userVal === expectedTaxIncluded) {
+                coupon.taxUnlocked = true;
+                sound.playCorrect();
+                step2StatusBadge.textContent = 'クリア済み ✨';
+                step2StatusBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-800';
+                taxAnswerInput.disabled = true;
+                checkTaxBtn.disabled = true;
+                taxQuizFeedback.textContent = `⭕ 大正解！「${coupon.product.category}」は税率${taxInfo.percent}%で税込 ¥${expectedTaxIncluded.toLocaleString()} です！「税込表示」を押してみよう！`;
+                taxQuizFeedback.className = 'text-[11px] font-bold mt-1.5 text-emerald-700';
+                taxQuizFeedback.classList.remove('hidden');
+                renderDiscountResult(coupon);
+                updateHistoryUI();
+                showToast('正解！「税込表示」ボタンが押せるようになりました！', '🎊');
+            } else {
+                sound.playWrong();
+                step2QuizArea.classList.remove('animate-shake');
+                void step2QuizArea.offsetWidth;
+                step2QuizArea.classList.add('animate-shake');
+
+                const hint = userVal > expectedTaxIncluded
+                    ? 'もう少し安い金額になります（税率と小数点以下切り捨てを確認してね）'
+                    : 'もう少し高い金額になります（割引後金額に消費税を足した額を入力してね）';
+                taxQuizFeedback.textContent = `❌ 不正解！${hint}`;
+                taxQuizFeedback.className = 'text-[11px] font-bold mt-1.5 text-rose-600';
+                taxQuizFeedback.classList.remove('hidden');
+            }
+        }
+
+        // --- 楽しいお祝いイベント発動演出 ---
+        const FUN_EVENTS = [
+            { emoji: '🎆', title: 'PERFECT! お買い物マスター認定！', desc: '消費税計算も完璧！夜空に特大花火を打ち上げました！' },
+            { emoji: '👑', title: 'SUPER SHOPPER! 暗算王の称号獲得！', desc: '割引＆税率クリアおめでとう！キラキラ紙吹雪フェスティバル！' },
+            { emoji: '🎉', title: 'GREAT JOB! スマート会計達人！', desc: 'おトクな買い物大成功！祝福のファンファーレが鳴り響く！' },
+            { emoji: '🌟', title: 'MIRACLE CLEAR! ラッキー会計達成！', desc: '全ステップ制覇おめでとう！最高のショッピング体験！' }
+        ];
+
+        function triggerFunTaxEvent(coupon) {
+            const picked = FUN_EVENTS[Math.floor(Math.random() * FUN_EVENTS.length)];
+            funEventEmoji.textContent = picked.emoji;
+            funEventTitle.textContent = picked.title;
+            funEventDesc.textContent = picked.desc;
+
+            funEventBanner.classList.remove('hidden');
+            funEventBanner.classList.remove('animate-pop-in');
+            void funEventBanner.offsetWidth;
+            funEventBanner.classList.add('animate-pop-in');
+
+            sound.playCelebration();
+            launchConfetti();
+            launchFireworks();
+            showToast(`${picked.emoji} ${picked.title}`, '🎊');
         }
 
         function hideResultModal() {
@@ -799,7 +1107,35 @@
 
             resultDiscountAmount.textContent = `-¥${discountAmount.toLocaleString()}`;
 
-            if (coupon.showTaxIncluded) {
+            // ステップ2（税込金額クイズ）の表示制御
+            taxAnswerInput.value = '';
+            if (coupon.taxUnlocked) {
+                step2QuizArea.classList.add('hidden');
+                toggleTaxBtn.disabled = false;
+                if (coupon.showTaxIncluded) {
+                    toggleTaxBtnIcon.textContent = '💴';
+                    toggleTaxBtnText.textContent = '税込非表示';
+                    toggleTaxBtn.className = 'px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-white text-[11px] font-black rounded-lg shadow-sm transition flex items-center gap-1 cursor-pointer';
+                } else {
+                    toggleTaxBtnIcon.textContent = '💴';
+                    toggleTaxBtnText.textContent = '税込表示';
+                    toggleTaxBtn.className = 'px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-black rounded-lg shadow-sm transition flex items-center gap-1 cursor-pointer animate-pulse';
+                }
+            } else {
+                step2QuizArea.classList.remove('hidden');
+                step2StatusBadge.textContent = '未クリア';
+                step2StatusBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900';
+                taxAnswerInput.disabled = false;
+                checkTaxBtn.disabled = false;
+                taxQuizFeedback.classList.add('hidden');
+
+                toggleTaxBtn.disabled = true;
+                toggleTaxBtnIcon.textContent = '🔒';
+                toggleTaxBtnText.textContent = '税込表示';
+                toggleTaxBtn.className = 'px-2.5 py-1 bg-slate-300 text-slate-500 text-[11px] font-black rounded-lg shadow-sm transition flex items-center gap-1 cursor-not-allowed';
+            }
+
+            if (coupon.showTaxIncluded && coupon.taxUnlocked) {
                 const taxInfo = getTaxRateInfo(coupon.product.category);
                 const taxAmount = Math.floor(finalPrice * taxInfo.rate);
                 const taxIncludedPrice = finalPrice + taxAmount;
@@ -808,57 +1144,59 @@
                 resultFinalPrice.textContent = `¥${taxIncludedPrice.toLocaleString()}`;
                 resultTaxDetail.textContent = `消費税 +¥${taxAmount.toLocaleString()}（${taxInfo.label}）`;
                 resultTaxDetail.classList.remove('hidden');
-
-                toggleTaxBtnText.textContent = '税抜表示に戻す';
-                toggleTaxBtn.className = 'px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-white text-[11px] font-black rounded-lg shadow-sm transition flex items-center gap-1 cursor-pointer';
             } else {
                 resultPriceLabel.textContent = 'お支払い金額（税抜）';
                 resultFinalPrice.textContent = `¥${finalPrice.toLocaleString()}`;
                 resultTaxDetail.classList.add('hidden');
+            }
 
-                toggleTaxBtnText.textContent = '税込表示';
-                toggleTaxBtn.className = 'px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-black rounded-lg shadow-sm transition flex items-center gap-1 cursor-pointer';
+            if (coupon.eventTriggered) {
+                funEventBanner.classList.remove('hidden');
+            } else {
+                funEventBanner.classList.add('hidden');
             }
 
             discountResultBox.classList.remove('hidden');
-
-            useCouponBtn.disabled = true;
-            useCouponBtn.className = 'w-full bg-slate-200 text-emerald-700 font-black py-3 rounded-xl flex items-center justify-center gap-2 text-sm border border-emerald-300 cursor-default';
-            useCouponBtnText.textContent = 'クーポン適用済み';
+            updateUseCouponButtonState(coupon);
         }
 
         function applyCurrentCoupon() {
-            if (!state.currentCoupon || state.currentCoupon.used) return;
+            if (!state.currentCoupon || state.currentCoupon.used || !state.currentCoupon.discountUnlocked) return;
             state.currentCoupon.used = true;
             sound.playUseCoupon();
+
+            // 商品イラスト・商品名・カテゴリを公開！
+            revealProductInfo(state.currentCoupon, true);
+            step1QuizBox.classList.add('hidden');
+
             renderDiscountResult(state.currentCoupon);
             updateHistoryUI();
 
             const discountAmount = Math.floor(state.currentCoupon.product.price * (state.currentCoupon.percent / 100));
-            showToast(`クーポンを使用しました！ ¥${discountAmount.toLocaleString()} おトク！`, '🎉');
+            showToast(`商品公開！「${state.currentCoupon.product.name}」（¥${discountAmount.toLocaleString()}引き）`, '🎁');
         }
 
-        window.useHistoryCoupon = function(id) {
+        window.openHistoryCoupon = function(id) {
             const target = state.history.find(item => item.id === id);
-            if (!target || target.used) return;
-            target.used = true;
-            sound.playUseCoupon();
-            updateHistoryUI();
-            if (state.currentCoupon && state.currentCoupon.id === id) {
-                renderDiscountResult(target);
-            }
-            const discountAmount = Math.floor(target.product.price * (target.percent / 100));
-            showToast(`クーポンを使用しました！ ¥${discountAmount.toLocaleString()} おトク！`, '🎉');
+            if (!target) return;
+            sound.playClick();
+            state.currentCoupon = target;
+            historyModal.classList.add('hidden');
+            historyModal.classList.remove('flex');
+            showResultModal(target);
         };
 
         window.toggleHistoryTax = function(id) {
             const target = state.history.find(item => item.id === id);
-            if (!target || !target.used) return;
+            if (!target || !target.used || !target.taxUnlocked) return;
             sound.playClick();
             target.showTaxIncluded = !target.showTaxIncluded;
             updateHistoryUI();
             if (state.currentCoupon && state.currentCoupon.id === id) {
                 renderDiscountResult(target);
+            }
+            if (!target.showTaxIncluded) {
+                triggerFunTaxEvent(target);
             }
         };
 
@@ -879,6 +1217,10 @@
                 const taxAmount = Math.floor(finalPrice * taxInfo.rate);
                 const taxIncludedPrice = finalPrice + taxAmount;
 
+                // クーポン使用前（!item.used）は履歴上でもイラスト・商品名・カテゴリをシークレット表示にする
+                const displayIcon = item.used && item.product ? item.product.icon : '❓';
+                const displayName = item.used && item.product ? item.product.name : '？？？（シークレット商品）';
+
                 return `
                 <div class="bg-slate-800/90 border border-slate-700 rounded-2xl p-3.5 flex items-center justify-between gap-2 shadow-sm hover:border-slate-600 transition">
                     <div class="flex items-center gap-3 min-w-0">
@@ -887,8 +1229,8 @@
                         </div>
                         <div class="min-w-0">
                             <div class="flex items-center gap-1.5">
-                                <span class="text-base">${item.product ? item.product.icon : '🎟️'}</span>
-                                <span class="font-bold text-xs text-slate-200 truncate">${item.product ? item.product.name : '対象商品'}</span>
+                                <span class="text-base">${displayIcon}</span>
+                                <span class="font-bold text-xs text-slate-200 truncate">${displayName}</span>
                             </div>
                             <div class="font-black text-sm text-yellow-300">
                                 ${item.displayType === 'percent' ? item.percent + '% OFF' : item.wari + '割引き'}
@@ -897,8 +1239,8 @@
                                 定価: ¥${item.product ? item.product.price.toLocaleString() : '---'}
                             </div>
                             ${item.used ? `
-                            <div class="mt-1 text-[11px] font-bold ${item.showTaxIncluded ? 'text-amber-300 bg-amber-950/60 border-amber-700/60' : 'text-emerald-400 bg-emerald-950/60 border-emerald-800/60'} border rounded-lg px-2 py-0.5 inline-block">
-                                ${item.showTaxIncluded
+                            <div class="mt-1 text-[11px] font-bold ${item.showTaxIncluded && item.taxUnlocked ? 'text-amber-300 bg-amber-950/60 border-amber-700/60' : 'text-emerald-400 bg-emerald-950/60 border-emerald-800/60'} border rounded-lg px-2 py-0.5 inline-block">
+                                ${item.showTaxIncluded && item.taxUnlocked
                                     ? `税込支払額: ¥${taxIncludedPrice.toLocaleString()}（税${taxInfo.percent}%: +¥${taxAmount.toLocaleString()}）`
                                     : `割引額: -¥${discountAmount.toLocaleString()}（税抜支払額: ¥${finalPrice.toLocaleString()}）`
                                 }
@@ -907,13 +1249,13 @@
                         </div>
                     </div>
                     <div class="flex flex-col gap-1.5 flex-shrink-0">
-                        ${!item.used ? `
-                        <button onclick="useHistoryCoupon(${item.id})" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-xs font-bold rounded-lg text-white transition shadow-sm cursor-pointer">
-                            使う
+                        ${!item.used || !item.taxUnlocked ? `
+                        <button onclick="openHistoryCoupon(${item.id})" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-xs font-bold rounded-lg text-white transition shadow-sm cursor-pointer">
+                            挑戦する
                         </button>
                         ` : `
                         <button onclick="toggleHistoryTax(${item.id})" class="px-2 py-1 ${item.showTaxIncluded ? 'bg-slate-600 hover:bg-slate-500' : 'bg-amber-600 hover:bg-amber-500'} text-[10px] font-bold rounded-lg text-white transition shadow-sm cursor-pointer">
-                            ${item.showTaxIncluded ? '税抜表示' : '税込表示'}
+                            ${item.showTaxIncluded ? '税込非表示' : '税込表示'}
                         </button>
                         `}
                         <button onclick="copyToClipboard('${item.code}')" class="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-[11px] font-bold rounded-lg text-slate-200 transition cursor-pointer">
@@ -973,6 +1315,33 @@
                     vRot: (Math.random() - 0.5) * 10,
                     life: 100 + Math.random() * 40
                 });
+            }
+        }
+
+        function launchFireworks() {
+            const colors = ['#facc15', '#ec4899', '#38bdf8', '#a855f7', '#34d399', '#fb923c'];
+            const bursts = 4;
+            for (let b = 0; b < bursts; b++) {
+                setTimeout(() => {
+                    const cx = canvas.width * (0.2 + Math.random() * 0.6);
+                    const cy = canvas.height * (0.18 + Math.random() * 0.35);
+                    const burstColor = colors[Math.floor(Math.random() * colors.length)];
+                    for (let i = 0; i < 48; i++) {
+                        const angle = (Math.PI * 2 * i) / 48;
+                        const speed = 3 + Math.random() * 6;
+                        particles.push({
+                            x: cx,
+                            y: cy,
+                            vx: Math.cos(angle) * speed,
+                            vy: Math.sin(angle) * speed,
+                            size: Math.random() * 6 + 4,
+                            color: i % 2 === 0 ? burstColor : colors[Math.floor(Math.random() * colors.length)],
+                            rotation: Math.random() * 360,
+                            vRot: (Math.random() - 0.5) * 12,
+                            life: 75 + Math.random() * 30
+                        });
+                    }
+                }, b * 240);
             }
         }
 
@@ -1041,13 +1410,28 @@
 
         // 結果モーダルの操作
         closeResultX.addEventListener('click', hideResultModal);
+        checkDiscountBtn.addEventListener('click', checkDiscountAnswer);
+        discountAnswerInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') checkDiscountAnswer();
+        });
+        checkTaxBtn.addEventListener('click', checkTaxAnswer);
+        taxAnswerInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') checkTaxAnswer();
+        });
         useCouponBtn.addEventListener('click', applyCurrentCoupon);
         toggleTaxBtn.addEventListener('click', () => {
-            if (!state.currentCoupon || !state.currentCoupon.used) return;
-            sound.playClick();
+            if (!state.currentCoupon || !state.currentCoupon.used || !state.currentCoupon.taxUnlocked) return;
             state.currentCoupon.showTaxIncluded = !state.currentCoupon.showTaxIncluded;
+            state.currentCoupon.eventTriggered = true;
             renderDiscountResult(state.currentCoupon);
             updateHistoryUI();
+
+            // 税込表示 / 税込非表示を切り替えたときに楽しいイベントを発生させる
+            triggerFunTaxEvent(state.currentCoupon);
+        });
+        replayFireworksBtn.addEventListener('click', () => {
+            if (!state.currentCoupon) return;
+            triggerFunTaxEvent(state.currentCoupon);
         });
         copyCodeBtn.addEventListener('click', () => {
             if (state.currentCoupon) {
